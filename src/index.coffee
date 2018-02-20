@@ -1,7 +1,7 @@
 import nacl from "tweetnacl"
 
 NaCl = (kms, kmsKey) ->
-  {randomKey, encrypt, decrypt} = kms
+  {randomKey, encrypt:kmsEncrypt, decrypt:kmsDecrypt} = kms
 
   # Uses NaCl secret key encryption API.
   secretKey = ->
@@ -23,7 +23,7 @@ NaCl = (kms, kmsKey) ->
       ciphertext = nacl.secretbox input, nonce, key
 
       # Lock the key
-      lockedKey = await encrypt kmsKey, key, "buffer"
+      lockedKey = await kmsEncrypt kmsKey, key, "buffer"
 
       # Return a package to the outer layer.
       Buffer.from JSON.stringify
@@ -32,16 +32,19 @@ NaCl = (kms, kmsKey) ->
         key: lockedKey
       .toString("base64")
 
-    decrypt = (ciphertext, encoding) ->
+    decrypt = (ciphertext, encoding="utf8") ->
       # Extract data for decryption.
       {message, nonce, key:lockedKey} =
         JSON.parse Buffer.from(ciphertext, "base64").toString()
 
       # Unlock the key
-      key = await decrypt lockedKey, "buffer"
+      key = await kmsDecrypt lockedKey, "buffer"
 
       # Return the decrypted the message.
-      nacl.secretbox.open message, nonce, key
+      if encoding == "buffer"
+        nacl.secretbox.open message, nonce, key
+      else
+        nacl.secretbox.open(message, nonce, key).toString encoding
 
     {encrypt, decrypt}
 

@@ -15,11 +15,15 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 var NaCl;
 
 NaCl = function (kms, kmsKey) {
-  var decrypt, encrypt, randomKey, secretKey;
-  ({ randomKey, encrypt, decrypt } = kms);
+  var kmsDecrypt, kmsEncrypt, randomKey, secretKey;
+  ({
+    randomKey,
+    encrypt: kmsEncrypt,
+    decrypt: kmsDecrypt
+  } = kms);
   // Uses NaCl secret key encryption API.
   return secretKey = function () {
-    var keyLength, nonceLength;
+    var decrypt, encrypt, keyLength, nonceLength;
     // Length in bytes
     keyLength = 32;
     nonceLength = 24;
@@ -38,7 +42,7 @@ NaCl = function (kms, kmsKey) {
         }
         ciphertext = _tweetnacl2.default.secretbox(input, nonce, key);
         // Lock the key
-        lockedKey = yield encrypt(kmsKey, key, "buffer");
+        lockedKey = yield kmsEncrypt(kmsKey, key, "buffer");
         // Return a package to the outer layer.
         return Buffer.from(JSON.stringify({
           message: ciphertext,
@@ -52,7 +56,7 @@ NaCl = function (kms, kmsKey) {
       };
     })();
     decrypt = (() => {
-      var _ref2 = _asyncToGenerator(function* (ciphertext, encoding) {
+      var _ref2 = _asyncToGenerator(function* (ciphertext, encoding = "utf8") {
         var key, lockedKey, message, nonce;
         ({
           // Extract data for decryption.
@@ -61,12 +65,16 @@ NaCl = function (kms, kmsKey) {
           key: lockedKey
         } = JSON.parse(Buffer.from(ciphertext, "base64").toString()));
         // Unlock the key
-        key = yield decrypt(lockedKey, "buffer");
+        key = yield kmsDecrypt(lockedKey, "buffer");
         // Return the decrypted the message.
-        return _tweetnacl2.default.secretbox.open(message, nonce, key);
+        if (encoding === "buffer") {
+          return _tweetnacl2.default.secretbox.open(message, nonce, key);
+        } else {
+          return _tweetnacl2.default.secretbox.open(message, nonce, key).toString(encoding);
+        }
       });
 
-      return function decrypt(_x2, _x3) {
+      return function decrypt(_x2) {
         return _ref2.apply(this, arguments);
       };
     })();
