@@ -1,0 +1,48 @@
+{
+  "name": "panda-sky-nacl",
+  "version": "0.0.1",
+  "description": "Encryption helper for Panda Sky that leverages AWS KMS and tweetnacl-js",
+  "main": "build/npm/lib/index.js",
+  "files": [
+    "build/npm",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pandastrike/panda-sky-nacl.git"
+  },
+  "keywords": [
+    "panda",
+    "sky",
+    "encryption",
+    "serverless",
+    "lambda",
+    "node"
+  ],
+  "contributors": [
+    {
+      "name": "Dan Yoder",
+      "email": "dan@pandastrike.com"
+    },
+    {
+      "name": "David Harper",
+      "email": "david@pandastrike.com"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pandastrike/panda-sky-nacl/issues"
+  },
+  "homepage": "https://github.com/pandastrike/panda-sky-nacl#readme",
+  "devDependencies": {
+    "coffeescript": "2.1.0",
+    "fairmont-build-tools": "1.0.2",
+    "gulp": "github:gulpjs/gulp#4.0"
+  },
+  "dependencies": {
+    "tweetnacl": "^1.0.0"
+  }
+}
