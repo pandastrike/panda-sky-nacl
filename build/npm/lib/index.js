@@ -15,14 +15,14 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 var NaCl;
 
 NaCl = function (kms, kmsKey) {
-  var kmsDecrypt, kmsEncrypt, randomKey, secretKey;
+  var kmsDecrypt, kmsEncrypt, randomKey, secretBox;
   ({
     randomKey,
     encrypt: kmsEncrypt,
     decrypt: kmsDecrypt
   } = kms);
   // Uses NaCl secret key encryption API.
-  return secretKey = function () {
+  secretBox = function () {
     var decrypt, encrypt, keyLength, nonceLength;
     // Length in bytes
     keyLength = 32;
@@ -32,23 +32,19 @@ NaCl = function (kms, kmsKey) {
         var ciphertext, input, key, lockedKey, nonce, random;
         // Get key + nonce from KMS's robust source of entropy.
         random = yield randomKey(keyLength + nonceLength, "buffer");
-        key = random.slice(0, keyLength - 1);
+        key = random.slice(0, keyLength);
         nonce = random.slice(keyLength);
-        // Encrypt the message.
+        // Encrypt the message. Convert from UInt8Array to Buffer.
         if (encoding === "buffer") {
           input = message;
         } else {
           input = Buffer.from(message, encoding);
         }
-        ciphertext = _tweetnacl2.default.secretbox(input, nonce, key);
+        ciphertext = Buffer.from(_tweetnacl2.default.secretbox(input, nonce, key));
         // Lock the key
         lockedKey = yield kmsEncrypt(kmsKey, key, "buffer");
-        // Return a package to the outer layer.
-        return Buffer.from(JSON.stringify({
-          message: ciphertext,
-          nonce: nonce,
-          key: lockedKey
-        })).toString("base64");
+        // Return a blob of base64 to the outer layer.
+        return Buffer.from(JSON.stringify({ ciphertext, nonce, lockedKey })).toString("base64");
       });
 
       return function encrypt(_x) {
@@ -56,21 +52,19 @@ NaCl = function (kms, kmsKey) {
       };
     })();
     decrypt = (() => {
-      var _ref2 = _asyncToGenerator(function* (ciphertext, encoding = "utf8") {
-        var key, lockedKey, message, nonce;
-        ({
-          // Extract data for decryption.
-          message,
-          nonce,
-          key: lockedKey
-        } = JSON.parse(Buffer.from(ciphertext, "base64").toString()));
-        // Unlock the key
+      var _ref2 = _asyncToGenerator(function* (blob, encoding = "utf8") {
+        var ciphertext, key, lockedKey, nonce;
+        // Extract data from the blob decryption.
+        ({ ciphertext, nonce, lockedKey } = JSON.parse(Buffer.from(blob, "base64").toString()));
+        ciphertext = Buffer.from(ciphertext.data);
+        nonce = Buffer.from(nonce.data);
+        // Unlock the key.
         key = yield kmsDecrypt(lockedKey, "buffer");
         // Return the decrypted the message.
         if (encoding === "buffer") {
-          return _tweetnacl2.default.secretbox.open(message, nonce, key);
+          return Buffer.from(_tweetnacl2.default.secretbox.open(ciphertext, nonce, key));
         } else {
-          return _tweetnacl2.default.secretbox.open(message, nonce, key).toString(encoding);
+          return Buffer.from(_tweetnacl2.default.secretbox.open(ciphertext, nonce, key)).toString(encoding);
         }
       });
 
@@ -79,7 +73,8 @@ NaCl = function (kms, kmsKey) {
       };
     })();
     return { encrypt, decrypt };
-  };
+  }();
+  return { secretBox };
 };
 
 exports.default = NaCl;
